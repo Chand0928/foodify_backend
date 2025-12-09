@@ -2,7 +2,15 @@ const Food = require('../models/Food');
 
 exports.getAllFoods = async (req, res) => {
     try {
-        const { search, category } = req.query;
+        const {
+            search,
+            category,
+            page = 1,
+            limit = 12,
+            sortBy = 'name',
+            order = 'asc'
+        } = req.query;
+
         let query = {};
 
         if (search) {
@@ -12,8 +20,31 @@ exports.getAllFoods = async (req, res) => {
             query.category = category;
         }
 
-        const foods = await Food.find(query);
-        res.json(foods);
+        // Calculate pagination
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        // Build sort object
+        const sortOrder = order === 'asc' ? 1 : -1;
+        const sortObj = { [sortBy]: sortOrder };
+
+        // Execute query with pagination and sorting
+        const foods = await Food.find(query)
+            .sort(sortObj)
+            .limit(parseInt(limit))
+            .skip(skip);
+
+        // Get total count for pagination
+        const total = await Food.countDocuments(query);
+
+        res.json({
+            foods,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });

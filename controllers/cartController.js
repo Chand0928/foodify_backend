@@ -60,6 +60,30 @@ exports.removeFromCart = async (req, res) => {
     }
 };
 
+exports.updateCartItem = async (req, res) => {
+    const { quantity } = req.body;
+    try {
+        const cartItem = await CartItem.findById(req.params.id);
+
+        if (!cartItem) {
+            return res.status(404).json({ message: 'Cart item not found' });
+        }
+
+        // Verify the cart item belongs to the user
+        if (cartItem.user.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        cartItem.quantity = quantity;
+        await cartItem.save();
+
+        res.json({ message: 'Cart item updated', cartItem });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 exports.clearCart = async (req, res) => {
     try {
         await CartItem.deleteMany({ user: req.user.id });
